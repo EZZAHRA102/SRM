@@ -1,268 +1,330 @@
-# SRM - نظام خدمة العملاء الذكي
-## Water & Electricity Utility AI Customer Service Assistant
+# SRM - Customer Service AI Assistant
 
-مساعد ذكي باللغة العربية لمساعدة المواطنين في فهم أسباب انقطاع الماء والكهرباء.
+💧 **نظام خدمة العملاء - SRM** (Water & Electricity Utility Customer Service AI)
 
----
+Hada wa7ed l-assistant AI intelligent dial service client pour les sociétés ta3 l-ma w dow (Water & Electricity), mbni b **FastAPI**, **Streamlit**, w **Azure OpenAI**.
 
-## 📋 نظرة عامة / Overview
+Had l-système kay3awen les clients yfhmou 3lach t9t3at service, y-checkiw status dial l-khlass (payment), w yakhdou des infos 3la l-maintenance, w hadchi kaml b conversation tabi3iya b l-3arbiya (Natural Language).
 
-This is a modular Proof of Concept (PoC) for SRM (Water & Electricity Utility) customer service. The AI agent helps citizens understand why their water/electricity service is interrupted, entirely in **Arabic**.
+## 🎯 Key Features 
 
-### ✨ المميزات الرئيسية / Key Features
+- **🤖 AI-Powered Chat Interface**: Chat katzwi b l-3arbiya b 7orya (Natural Language) grâce l **Azure OpenAI GPT-4**.
+- **📄 OCR Bill Processing**: Kay-extracté l-numéro CIL w les infos mn tsawer dial l-facture b **Azure Document Intelligence**.
+- **💳 Payment Status Check**: Vérification wach l-client mkhlless wla ba9i ki tsal chi montant (outstanding balances).
+- **🔧 Maintenance Information**: Kay-checké wach kayna chi travaux de maintenance awla service outage f zone dial l-client.
+- **🌐 RTL Arabic UI**: Interface fully localized l l-3arbiya w supportée RTL (Right-to-Left).
+- **🔄 Tool-Based AI Agent**: Agent mbni b **LangChain** li 9ader ykhddem des "tools" bach yjib l-information en temps réel.
 
-- 🤖 **مساعد ذكي بالعربية** - AI Assistant in Arabic using Azure OpenAI (GPT-4o)
-- 📄 **استخراج تلقائي لرقم CIL** - Automatic CIL extraction from bill images using Azure Document Intelligence
-- 💳 **التحقق من حالة الدفع** - Payment status verification
-- 🔧 **معلومات الصيانة** - Maintenance and outage information
-- 🌐 **واجهة عربية كاملة** - Full RTL (Right-to-Left) Arabic UI support
-- 📊 **بيانات تجريبية** - Mock data simulating Azure SQL database
-
----
-
-## 🏗️ البنية المعمارية / Architecture
+## 🏗️ Architecture Overview
+L'archi de base hiya normalement f had refonte dayrin sepration total mabin back o front 
 
 ```
-/srm
-├── .env.example              # Template for environment variables
-├── .env                      # Your environment variables (create this)
-├── app.py                    # Main entry point (minimal, clean)
-├── requirements.txt          # Python dependencies
-├── README.md                 # This file
-│
-├── /config                   # Configuration module
-│   ├── __init__.py
-│   └── settings.py           # Environment variables, Azure configs, constants
-│
-├── /data                     # Data layer
-│   ├── __init__.py
-│   └── mock_db.py            # Mock database using Pandas (simulates Azure SQL)
-│
-├── /services                 # Business logic layer
-│   ├── __init__.py
-│   ├── ai_service.py         # LangChain agent, tools, Arabic prompts
-│   └── ocr_service.py        # Azure Document Intelligence integration
-│
-└── /ui                       # Presentation layer
-    ├── __init__.py
-    ├── layout.py             # Header, sidebar, RTL CSS
-    └── chat_interface.py     # Chat components and message handling
+┌─────────────────────────────────────────────────────────────┐
+│                    Frontend (Streamlit)                     │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
+│  │   Chat   │  │   OCR    │  │ Sidebar  │  │  Header  │  │
+│  │ Component│  │ Component│  │Component │  │Component │  │
+│  └────┬─────┘  └────┬─────┘  └──────────┘  └──────────┘  │
+│       │             │                                        │
+│       └──────┬──────┘                                        │
+│              │                                               │
+│       ┌──────▼──────┐                                        │
+│       │ API Client  │                                        │
+│       └──────┬──────┘                                        │
+└──────────────┼───────────────────────────────────────────────┘
+               │ HTTP/REST
+               │
+┌──────────────▼───────────────────────────────────────────────┐
+│              Backend (FastAPI)                                │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │              API Routes                              │   │
+│  │  ┌────────┐  ┌────────┐  ┌────────┐  ┌────────┐   │   │
+│  │  │ /chat  │  │ /ocr/*  │  │/health │  │  ...   │   │   │
+│  │  └───┬────┘  └───┬────┘  └────────┘  └────────┘   │   │
+│  └──────┼────────────┼──────────────────────────────────┘   │
+│         │            │                                        │
+│  ┌──────▼────────────▼──────┐                               │
+│  │      SRM AI Agent         │                               │
+│  │  (LangChain + Azure GPT)  │                               │
+│  │  ┌─────────────────────┐  │                               │
+│  │  │  Tools:             │  │                               │
+│  │  │  - check_payment    │  │                               │
+│  │  │  - check_maintenance│  │                               │
+│  │  └──────────┬──────────┘  │                               │
+│  └─────────────┼─────────────┘                               │
+│                │                                               │
+│  ┌─────────────▼─────────────┐                               │
+│  │      Services Layer        │                               │
+│  │  ┌──────────┐ ┌─────────┐│                               │
+│  │  │   User   │ │Maintenance││                               │
+│  │  │ Service  │ │ Service  ││                               │
+│  │  └────┬─────┘ └────┬─────┘│                               │
+│  │       │            │        │                               │
+│  │  ┌────▼────────────▼─────┐│                               │
+│  │  │   OCR Service          ││                               │
+│  │  │  (Azure Doc Intel)    ││                               │
+│  │  └───────────────────────┘│                               │
+│  └─────────────┬─────────────┘                               │
+│                │                                               │
+│  ┌─────────────▼─────────────┐                               │
+│  │   Repository Layer         │                               │
+│  │  (MockRepository/Pandas)   │                               │
+│  └────────────────────────────┘                               │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
----
+## 📋 Li Khass Ykon 3ndk
 
-## 🚀 التثبيت والإعداد / Installation & Setup
+- **Python 3.9+** (Mzyana tkon 3.10 wla 3.11).
+- **Azure OpenAI Account** m3a GPT-4 deployment.
+- **Azure Document Intelligence** service (bach tkhddem l-OCR).
+- **Git** (bach t-cloné l-repo).
+- **Windows PowerShell** (ila bghiti tsta3ml l-setup script) awla setup manuel.
 
-### المتطلبات / Prerequisites
+## 🚀 Quick Start (Kifach Tbda)
 
-- Python 3.9+
-- Azure OpenAI account with GPT-4o deployment
-- Azure Document Intelligence (Form Recognizer) resource
+### 1. Clone the Repository
 
-### 1️⃣ استنساخ المشروع / Clone the Project
+Awl 7aja, cloné l-repo f machine dialek:
+
+```bash
+git clone <repository-url>
+cd SRM
+```
+
+### 2. Run Setup Script (Windows PowerShell)
+
+Ila knti f Windows, l-script wajed bach y-installé lik koulchi:
 
 ```powershell
-cd "c:\Users\TahaELMARZOUKI\OneDrive - ALEXSYS SOLUTIONS\Desktop\srm"
+.\setup.ps1
 ```
 
-### 2️⃣ إنشاء بيئة افتراضية / Create Virtual Environment
+Had l-script ghadi ydir hadchi:
+- Y-checké l-installation dial Python.
+- Y-créé l-environnement virtuel (`venv`).
+- Y-installé les dépendances (dependencies) kamlin.
+- Y-créé l-fichier `.env` mn template (ila makanch deja kayn).
 
-```powershell
+### 3. Manual Setup (Alternative)
+
+Ila knti f Linux/Mac, wla bghiti t-installé b yeddek:
+
+```bash
+# Créé virtual environment
 python -m venv venv
+
+# Activé l'environnement
+# Windows PowerShell:
 .\venv\Scripts\Activate.ps1
-```
+# Linux/Mac:
+source venv/bin/activate
 
-### 3️⃣ تثبيت المكتبات / Install Dependencies
-
-```powershell
+# Installé les requirements
+pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### 4️⃣ إعداد المتغيرات البيئية / Configure Environment Variables
+### 4. Configure Environment Variables
 
-Copy `.env.example` to `.env` and fill in your Azure credentials:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-Edit `.env` with your credentials:
+Khass t-créé fichier `.env` f racine dial projet w t7et fih les credentials Azure dialek:
 
 ```env
 # Azure OpenAI Configuration
-AZURE_OPENAI_API_KEY=your_actual_key_here
+AZURE_OPENAI_API_KEY=your_azure_openai_api_key
 AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
 AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4o
 AZURE_OPENAI_API_VERSION=2024-08-01-preview
 
 # Azure Document Intelligence Configuration
 AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT=https://your-resource.cognitiveservices.azure.com/
-AZURE_DOCUMENT_INTELLIGENCE_KEY=your_actual_key_here
+AZURE_DOCUMENT_INTELLIGENCE_KEY=your_document_intelligence_key
+
+# Optional: API Configuration
+API_HOST=0.0.0.0
+API_PORT=8000
 ```
 
-### 5️⃣ تشغيل التطبيق / Run the Application
+### 5. Run the Application
 
-```powershell
-streamlit run app.py
+#### Option A: Run Both Services Together (Recommandé)
+
+B commande we7da t-lancé backend w frontend d9a we7da:
+
+```bash
+python run.py
 ```
 
-The application will open in your browser at `http://localhost:8501`
+Hadchi ghaykhddem:
+- **Backend API** f `http://localhost:8000`
+- **Frontend UI** f `http://localhost:8501`
 
----
+#### Option B: Run Services Separately
 
-## 🧪 اختبار النظام / Testing the System
+**Terminal 1 - Backend:**
+```bash
+uvicorn backend.main:app --host 0.0.0.0 --port 8000
+```
 
-### Test CIL Numbers
+**Terminal 2 - Frontend:**
+```bash
+streamlit run frontend/app.py --server.port 8501
+```
 
-Use these CIL numbers to test different scenarios:
+### 6. Access the Application
 
-| CIL Number | Name | Payment Status | Maintenance | Service Status |
-|------------|------|----------------|-------------|----------------|
-| `1071324-101` | Abdenbi EL MARZOUKI | ✅ Paid | ⚙️ Yes | Active |
-| `1300994-101` | Ahmed Sabil | ✅ Paid | No | Active |
-| `3095678-303` | محمد الإدريسي | ✅ Paid | No | Active |
-| `4017890-404` | خديجة العلوي | ✅ Paid | No | Active |
-| `5029012-505` | يوسف السباعي | ❌ Unpaid (890 DH) | No | Disconnected |
+- **Frontend UI**: http://localhost:8501
+- **Backend API**: http://localhost:8000
+- **API Documentation**: http://localhost:8000/docs (Swagger UI)
+- **Alternative API Docs**: http://localhost:8000/redoc
 
-### Example Conversation Flow
+## 🧪 Testing
 
-1. **User**: مرحبا
-2. **Agent**: مرحباً بك! الرجاء تقديم رقم CIL
-3. **User**: 5029012-505
-4. **Agent**: [Checks payment] يوجد رصيد مستحق 890 درهم...
-5. **User**: 1071324-101
-6. **Agent**: [Checks payment - paid, then checks maintenance] جاري صيانة في منطقتك...
+### Run All Tests
 
----
+Bach t-lancé les tests kamlin:
 
-## 📦 المكونات الرئيسية / Main Components
+```bash
+pytest
+```
 
-### 🔧 config/settings.py
-- Loads environment variables using `python-dotenv`
-- Validates configuration on startup
-- Provides Arabic error messages for missing keys
+### Run Tests with Coverage
 
-### 💾 data/mock_db.py
-- Contains `users_table` and `zones_table` as Pandas DataFrames
-- Simulates Azure SQL database
-- Provides lookup functions: `get_user_by_cil()`, `get_zone_by_id()`
+Ila bghiti tchouf coverage report:
 
-### 🤖 services/ai_service.py
-- **Tools**: `check_payment()`, `check_maintenance()`
-- **Agent**: LangChain agent with Azure OpenAI (GPT-4o)
-- **System Prompt**: Strictly enforces Arabic language responses
-- **Integration**: Uses LangChain's `create_openai_tools_agent`
+```bash
+pytest --cov=backend --cov=frontend
+```
 
-### 📄 services/ocr_service.py
-- `extract_cil_from_image()`: Extracts CIL from uploaded bill images
-- Uses Azure Document Intelligence (prebuilt-read model)
-- Regex pattern matching for CIL numbers (format: 1071324-101)
+### Run Specific Test Files
 
-### 🎨 ui/layout.py
-- `inject_rtl_css()`: Injects RTL (Right-to-Left) CSS for Arabic
-- `render_header()`: Application header with branding
-- `render_sidebar()`: Information, instructions, test CIL numbers
+```bash
+# Test dial services
+pytest tests/backend/test_services.py
 
-### 💬 ui/chat_interface.py
-- `render_chat_interface()`: Main chat UI
-- Handles message history in `st.session_state`
-- Image upload and OCR integration
-- Chat input and response display
+# Test dial API endpoints
+pytest tests/backend/test_api/
 
-### 🚪 app.py
-- Main entry point (minimal and clean)
-- Configuration validation
-- Agent initialization with caching
-- Component orchestration
+# Test dial AI agent
+pytest tests/backend/test_ai_agent.py
+```
 
----
+## 📡 API Endpoints
 
-## 🛠️ التقنيات المستخدمة / Tech Stack
+### Health Check
+- `GET /api/health` - Bach tchouf wach l-API khddama mzyan.
 
-| Component | Technology |
-|-----------|-----------|
-| **Frontend** | Streamlit |
-| **AI Framework** | LangChain |
-| **LLM** | Azure OpenAI (GPT-4o) |
-| **OCR** | Azure Document Intelligence |
-| **Data** | Pandas (mock Azure SQL) |
-| **Language** | Python 3.9+ |
+### Chat
+- `POST /api/chat` - Sift message l l-AI agent.
+  ```json
+  {
+    "message": "رقم CIL الخاص بي هو: 1071324-101",
+    "history": []
+  }
+  ```
 
----
+### OCR
+- `POST /api/ocr/extract-cil` - Jbed l-CIL number mn tswira.
+- `POST /api/ocr/extract-bill` - Jbed les infos dial l-facture kamlin mn tswira.
 
-## 🌍 الدعم العربي / Arabic Support
+Chouf documentation kamla f `http://localhost:8000/docs` mli tkon l-backend khddama.
 
-### RTL (Right-to-Left) Implementation
+## 📁 Project Structure
 
-The UI fully supports Arabic with:
-- ✅ RTL text direction for all components
-- ✅ Right-aligned text inputs and chat messages
-- ✅ Arabic fonts optimized for readability
-- ✅ Culturally appropriate greetings and responses
+Structure dial les dossiers kifach dayra:
 
-### Arabic System Prompt
+```
+SRM/
+├── backend/                 # Backend FastAPI application
+│   ├── ai/                  # AI agent w tools
+│   │   ├── agent.py        # SRM AI Agent (LangChain)
+│   │   ├── tools.py        # Définition dial LangChain tools
+│   │   └── prompts.py      # AI prompts (b l-3arbiya)
+│   ├── api/                 # API routes w dependencies
+│   │   ├── routes/         # Handlers dial API endpoints
+│   │   │   ├── chat.py     # Chat endpoint
+│   │   │   ├── ocr.py      # OCR endpoints
+│   │   │   └── health.py   # Health check
+│   │   └── deps.py         # Dependency injection
+│   ├── models/             # Pydantic data models
+│   ├── repositories/       # Data access layer (Mock DB)
+│   ├── services/           # Business logic layer (User, Maintenance, OCR)
+│   ├── config.py           # Config management
+│   └── main.py             # FastAPI entry point
+├── frontend/               # Streamlit frontend
+│   ├── components/        # UI components (Chat, Sidebar, etc.)
+│   ├── styles/            # CSS Styles (RTL support)
+│   ├── api_client.py      # Client li kaydwi m3a Backend
+│   └── app.py             # Streamlit entry point
+├── tests/                  # Test suite
+├── requirements.txt       # Les librairies Python
+├── setup.ps1             # Script setup Windows
+├── run.py                # Script bach t-lancé kolchi
+└── GUIDE.md              # Guide détaillé pour les développeurs
+```
 
-The AI agent is strictly instructed to:
-- Respond **only in Arabic**
-- Use professional, formal Arabic (Fusha)
-- Provide clear, actionable information
-- Follow Moroccan cultural context
+## 🔧 Configuration
 
----
+### Environment Variables
 
-## 📝 الخطوات التالية / Next Steps
+Had les variables darouri t-configurihom:
 
-### للإنتاج / For Production
+| Variable | Description | Required | Default |
+|----------|-------------|----------|---------|
+| `AZURE_OPENAI_API_KEY` | Key dial Azure OpenAI | Yes | - |
+| `AZURE_OPENAI_ENDPOINT` | Endpoint URL dial Azure OpenAI | Yes | - |
+| `AZURE_OPENAI_DEPLOYMENT_NAME` | Smya dial GPT-4 deployment | No | `gpt-4o` |
+| `AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT` | Endpoint dial Doc Intelligence | Yes | - |
+| `AZURE_DOCUMENT_INTELLIGENCE_KEY` | Key dial Doc Intelligence | Yes | - |
+| `API_HOST` | Backend host | No | `0.0.0.0` |
+| `API_PORT` | Backend port | No | `8000` |
 
-1. **قاعدة البيانات** - Replace Pandas mock data with Azure SQL Database
-2. **المصادقة** - Add user authentication and authorization
-3. **السجلات** - Implement comprehensive logging (Azure Application Insights)
-4. **التحليلات** - Add conversation analytics and reporting
-5. **التوسع** - Containerize with Docker for Azure deployment
-6. **الأمان** - Implement data encryption and PII protection
+## 🧩 Key Components (Les Éléments MOHIMIINNNEEE hhhh)
 
-### ميزات إضافية / Additional Features
+### AI Agent (`backend/ai/agent.py`)
+- Agent mbni b LangChain (yaa3 mais 3gzt ndero from scratch ) w Azure OpenAI GPT-4.
+- Architecture "Tool-based" bach y-exécuté la logique métier (check solde, etc.).
+- Prompts m9adin b l-3arbiya bach ykon l-jawab fniwen ozwiwen o nwidee hhhhh
 
-- 📧 Email/SMS notifications for payment reminders
-- 📊 Admin dashboard for monitoring conversations
-- 🔔 Real-time outage alerts
-- 💳 Integrated payment gateway
-- 📱 Mobile app version
+### OCR Service (`backend/services/ocr_service.py`)
+- Intégration m3a Azure Document Intelligence.
+- Kaysta3ml Regex patterns bach yjbed CIL.
+- Kay-extracté l-montant, date, w type de service mn l-facture.
 
----
+### Mock Repository (`backend/repositories/mock_repository.py`)
+- Data store "In-memory" b Pandas.
+- Kay-simulé base de données Azure SQL.
+- Sahla tbddelha b implémentation réelle mli t-connecté m3a DB dial bss7.
 
-## 🤝 المساهمة / Contributing
+## 📚 Documentation
 
-This is a Proof of Concept. For production use:
-1. Review and update security configurations
-2. Implement proper error handling and monitoring
-3. Add comprehensive unit and integration tests
-4. Follow Azure best practices for scalability
+- **[GUIDE.md](GUIDE.md)** - Guide complet fih les détails dial architecture, flows, w kifach t-modifié l-code.
 
----
+## 🤝 Contributing
 
-## 📄 الترخيص / License
+1. Tb3 l-architecture patterns li kaynin f l-code.
+2.kteb tests l ay feature jdida.
+3. Mise à jour l-documentation ila bddelti chi 7aja.
+4. Tbe3 les standards PEP 8 dial Python.
 
-© 2024 SRM - نظام إدارة المياه والكهرباء
+## 🆘 Troubleshooting (7ll l-machakil)
 
----
+### Backend won't start (Backend mabghach ykhdm)
+- Vérifié wach environment variables kamlin m7totin f `.env`.
+- Chof wach Azure credentials s7a7.
+- T2aked anna port 8000 ma-mst3mlch mn jiha khra.
 
-## 📞 الدعم / Support
+### Frontend can't connect to backend
+- T2aked anna Backend running f `http://localhost:8000`.
+- Chof `API_URL` ila knti mkhddem custom URL.
+- Vérifié CORS settings f `backend/main.py`.
 
-- **Emergency**: 0800-000-000
-- **Email**: support@srm.ma
-- **Documentation**: This README
+### OCR extraction fails
+- T2aked mn Azure Document Intelligence credentials.
+- Chof format dial l-image (PNG, JPG, JPEG, PDF).
+- T2aked anna l-image fiha ktba bayna (readable text).
 
----
-
-## ⚠️ ملاحظات مهمة / Important Notes
-
-1. **Mock Data**: Currently using Pandas DataFrames. Replace with Azure SQL for production.
-2. **API Keys**: Never commit `.env` file to version control
-3. **Costs**: Monitor Azure OpenAI and Document Intelligence usage
-4. **Testing**: Use provided test CIL numbers during development
-5. **Arabic**: All user-facing text must remain in Arabic
-
----
-
-Built with ❤️ for Moroccan citizens
+### AI agent not responding
+- Vérifié Azure OpenAI credentials w deployment name.
+- T2aked mn API version wach compatible m3a subscription dialek.
+- Chof les logs dial backend bach t3rf l-erreur exact.
