@@ -6,7 +6,7 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, Tool
 from backend.models import ChatMessage, ChatResponse
 from backend.config import Settings
 from backend.services import UserService, MaintenanceService
-from backend.ai.prompts import SYSTEM_PROMPT_AR
+from backend.ai.prompts import SYSTEM_PROMPT_AR, SYSTEM_PROMPT_FR
 from backend.ai.tools import create_payment_tool, create_maintenance_tool
 
 logger = logging.getLogger(__name__)
@@ -72,13 +72,14 @@ class SRMAgent:
             logger.error(f"Failed to initialize agent: {e}")
             return False
     
-    def chat(self, message: str, history: List[ChatMessage]) -> ChatResponse:
+    def chat(self, message: str, history: List[ChatMessage], language: str = "ar") -> ChatResponse:
         """
         Process a chat message and return response.
         
         Args:
             message: User message
             history: Previous chat messages
+            language: Language code ('ar' or 'fr')
             
         Returns:
             ChatResponse with agent response
@@ -91,14 +92,15 @@ class SRMAgent:
         
         if not self._llm:
             logger.error("LLM not initialized")
+            error_message = "Désolé, l'assistant intelligent n'a pas été initialisé. Veuillez vérifier les paramètres." if language == "fr" else "عذراً، لم يتم تهيئة المساعد الذكي. الرجاء التحقق من الإعدادات."
             return ChatResponse(
-                response="عذراً، لم يتم تهيئة المساعد الذكي. الرجاء التحقق من الإعدادات.",
+                response=error_message,
                 tool_calls=None
             )
         
         try:
             # Build messages list
-            messages = self._build_messages(message, history)
+            messages = self._build_messages(message, history, language)
             logger.debug(f"Built {len(messages)} messages for LLM (including system prompt)")
             
             # Get response from agent
@@ -121,7 +123,7 @@ class SRMAgent:
                 
                 # Execute tools and create tool messages
                 logger.info("Executing tool calls...")
-                tool_messages = self._execute_tools(response.tool_calls)
+                tool_messages = self._execute_tools(response.tool_calls, language)
                 logger.info(f"Tool execution completed, {len(tool_messages)} tool message(s) generated")
                 messages.extend(tool_messages)
                 
@@ -149,23 +151,27 @@ class SRMAgent:
             
         except Exception as e:
             logger.error(f"Error in chat: {e}", exc_info=True)
+            error_message = f"Désolé, une erreur s'est produite: {str(e)}" if language == "fr" else f"عذراً، حدث خطأ: {str(e)}"
             return ChatResponse(
-                response=f"عذراً، حدث خطأ: {str(e)}",
+                response=error_message,
                 tool_calls=None
             )
     
-    def _build_messages(self, message: str, history: List[ChatMessage]) -> List:
+    def _build_messages(self, message: str, history: List[ChatMessage], language: str = "ar") -> List:
         """
         Build messages list for LLM.
         
         Args:
             message: Current user message
             history: Previous chat messages
+            language: Language code ('ar' or 'fr')
             
         Returns:
             List of LangChain messages
         """
-        messages = [SystemMessage(content=SYSTEM_PROMPT_AR)]
+        # Select system prompt based on language
+        system_prompt = SYSTEM_PROMPT_FR if language == "fr" else SYSTEM_PROMPT_AR
+        messages = [SystemMessage(content=system_prompt)]
         
         # Add chat history
         for msg in history:
@@ -179,12 +185,13 @@ class SRMAgent:
         
         return messages
     
-    def _execute_tools(self, tool_calls: List[dict]) -> List[ToolMessage]:
+    def _execute_tools(self, tool_calls: List[dict], language: str = "ar") -> List[ToolMessage]:
         """
         Execute tool calls and return tool messages.
         
         Args:
             tool_calls: List of tool call dictionaries
+            language: Language code ('ar' or 'fr')
             
         Returns:
             List of ToolMessage objects
@@ -213,7 +220,8 @@ class SRMAgent:
                         logger.debug(f"Tool {tool_name} result (preview): {result_preview}")
                     except Exception as e:
                         logger.error(f"Tool {tool_name} execution failed: {e}", exc_info=True)
-                        tool_result = f"عذراً، حدث خطأ في تنفيذ الأداة: {str(e)}"
+                        error_msg = f"Désolé, une erreur s'est produite lors de l'exécution de l'outil: {str(e)}" if language == "fr" else f"عذراً، حدث خطأ في تنفيذ الأداة: {str(e)}"
+                        tool_result = error_msg
                     break
             
             if tool_result:

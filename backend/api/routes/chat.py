@@ -36,7 +36,8 @@ async def chat(
     try:
         response = agent.chat(
             message=request.message,
-            history=request.history
+            history=request.history,
+            language=request.language
         )
         
         logger.info(f"Chat response generated: {len(response.response)} chars")

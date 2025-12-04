@@ -22,6 +22,7 @@ class ChatRequest(BaseModel):
     """Chat request model."""
     message: str = Field(..., description="User message")
     history: List[ChatMessage] = Field(default_factory=list, description="Chat history")
+    language: str = Field(default="ar", description="Language: 'ar' or 'fr'")
 
     class Config:
         """Pydantic config."""
