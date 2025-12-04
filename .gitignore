@@ -53,3 +53,6 @@ htmlcov/
 
 # Azure
 .azure/
+
+# Node Modules
+node_modules/
