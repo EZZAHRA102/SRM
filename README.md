@@ -118,19 +118,19 @@ Use these CIL numbers to test different scenarios:
 
 | CIL Number | Name | Payment Status | Maintenance | Service Status |
 |------------|------|----------------|-------------|----------------|
-| `12345678` | أحمد المرزوقي | ✅ Paid | ⚙️ Yes | Active |
-| `87654321` | فاطمة الزهراء | ❌ Unpaid (450 DH) | No | Disconnected |
-| `11223344` | محمد الإدريسي | ✅ Paid | No | Active |
-| `55667788` | خديجة العلوي | ✅ Paid | No | Active |
-| `99887766` | يوسف السباعي | ❌ Unpaid (890 DH) | No | Disconnected |
+| `1071324-101` | Abdenbi EL MARZOUKI | ✅ Paid | ⚙️ Yes | Active |
+| `1300994-101` | Ahmed Sabil | ✅ Paid | No | Active |
+| `3095678-303` | محمد الإدريسي | ✅ Paid | No | Active |
+| `4017890-404` | خديجة العلوي | ✅ Paid | No | Active |
+| `5029012-505` | يوسف السباعي | ❌ Unpaid (890 DH) | No | Disconnected |
 
 ### Example Conversation Flow
 
 1. **User**: مرحبا
 2. **Agent**: مرحباً بك! الرجاء تقديم رقم CIL
-3. **User**: 87654321
-4. **Agent**: [Checks payment] يوجد رصيد مستحق 450 درهم...
-5. **User**: 12345678
+3. **User**: 5029012-505
+4. **Agent**: [Checks payment] يوجد رصيد مستحق 890 درهم...
+5. **User**: 1071324-101
 6. **Agent**: [Checks payment - paid, then checks maintenance] جاري صيانة في منطقتك...
 
 ---
