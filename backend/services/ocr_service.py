@@ -184,6 +184,11 @@ class OCRService:
                 logger.warning("No text content found in document")
                 return ""
             
+            # Log raw OCR extracted text (first 500 chars for brevity)
+            raw_text_preview = result.content[:500] + "..." if len(result.content) > 500 else result.content
+            logger.debug(f"OCR Raw Text (preview): {raw_text_preview}")
+            logger.info(f"OCR extracted {len(result.content)} characters of text")
+            
             return result.content
             
         except Exception as e:
@@ -229,24 +234,32 @@ class OCRService:
             Extracted CIL or None if not found
         """
         patterns = [
-            (self.CIL_PATTERN_WITH_LABEL, False),  # Correct format with label
-            (self.CIL_PATTERN_REVERSED_WITH_LABEL, True),  # Reversed with label
-            (self.CIL_PATTERN_STANDALONE, False),  # Standalone correct
-            (self.CIL_PATTERN_REVERSED_STANDALONE, True),  # Standalone reversed
-            (self.CIL_PATTERN_NO_DASH, False),  # No dash
-            (self.CIL_PATTERN_FALLBACK, False)  # Fallback
+            (self.CIL_PATTERN_WITH_LABEL, False, "CIL_PATTERN_WITH_LABEL"),  # Correct format with label
+            (self.CIL_PATTERN_REVERSED_WITH_LABEL, True, "CIL_PATTERN_REVERSED_WITH_LABEL"),  # Reversed with label
+            (self.CIL_PATTERN_STANDALONE, False, "CIL_PATTERN_STANDALONE"),  # Standalone correct
+            (self.CIL_PATTERN_REVERSED_STANDALONE, True, "CIL_PATTERN_REVERSED_STANDALONE"),  # Standalone reversed
+            (self.CIL_PATTERN_NO_DASH, False, "CIL_PATTERN_NO_DASH"),  # No dash
+            (self.CIL_PATTERN_FALLBACK, False, "CIL_PATTERN_FALLBACK")  # Fallback
         ]
         
-        for pattern, is_reversed in patterns:
+        logger.debug(f"Attempting CIL extraction from text (length: {len(text)} chars)")
+        
+        for pattern, is_reversed, pattern_name in patterns:
             match = pattern.search(text)
+            logger.debug(f"Trying pattern {pattern_name}: {'MATCH' if match else 'no match'}")
             if match:
                 cil = match.group(1)
+                logger.debug(f"Pattern {pattern_name} matched: {cil}")
                 if is_reversed or '-' in cil:
+                    original_cil = cil
                     cil = self._normalize_cil_format(cil)
-                logger.info(f"Extracted CIL using pattern {pattern.pattern[:50]}...: {cil}")
+                    if original_cil != cil:
+                        logger.debug(f"Normalized CIL: {original_cil} → {cil}")
+                logger.info(f"Extracted CIL using pattern {pattern_name}: {cil}")
                 return cil
         
         logger.warning("No CIL pattern matched in text")
+        logger.debug(f"Text content searched: {text[:200]}...")  # Log first 200 chars for debugging
         return None
     
     def _extract_name_from_text(self, text: str) -> Optional[str]:
@@ -259,8 +272,10 @@ class OCRService:
         Returns:
             Extracted name or None if not found
         """
-        for pattern in self.NAME_PATTERNS:
+        logger.debug("Attempting name extraction from text")
+        for idx, pattern in enumerate(self.NAME_PATTERNS):
             match = pattern.search(text)
+            logger.debug(f"Trying name pattern {idx+1}: {'MATCH' if match else 'no match'}")
             if match:
                 name = match.group(1).strip()
                 # Clean up: remove any trailing text that might have been captured
@@ -268,8 +283,10 @@ class OCRService:
                 name = name.split('\n')[0].strip()
                 # Validate: must be longer than 3 chars and not just digits
                 if len(name) > 3 and not name.isdigit() and not any(char.isdigit() for char in name[:5]):
-                    logger.info(f"Extracted name: {name}")
+                    logger.info(f"Extracted name using pattern {idx+1}: {name}")
                     return name
+                else:
+                    logger.debug(f"Pattern {idx+1} matched but name '{name}' failed validation")
         
         logger.warning("No name pattern matched")
         return None
@@ -284,16 +301,19 @@ class OCRService:
         Returns:
             Extracted amount or None if not found
         """
-        for pattern in self.AMOUNT_PATTERNS:
+        logger.debug("Attempting amount extraction from text")
+        for idx, pattern in enumerate(self.AMOUNT_PATTERNS):
             match = pattern.search(text)
+            logger.debug(f"Trying amount pattern {idx+1}: {'MATCH' if match else 'no match'}")
             if match:
                 amount_str = match.group(1).replace(',', '.')
                 try:
                     amount = float(amount_str)
                     if amount >= 0:  # Validate non-negative
-                        logger.info(f"Extracted amount: {amount}")
+                        logger.info(f"Extracted amount using pattern {idx+1}: {amount} DH")
                         return amount
                 except ValueError:
+                    logger.debug(f"Pattern {idx+1} matched '{amount_str}' but failed to parse as float")
                     continue
         
         logger.warning("No amount pattern matched")
@@ -309,11 +329,13 @@ class OCRService:
         Returns:
             Extracted date string or None if not found
         """
-        for pattern in self.DATE_PATTERNS:
+        logger.debug("Attempting date extraction from text")
+        for idx, pattern in enumerate(self.DATE_PATTERNS):
             match = pattern.search(text)
+            logger.debug(f"Trying date pattern {idx+1}: {'MATCH' if match else 'no match'}")
             if match:
                 date_str = match.group(1)
-                logger.info(f"Extracted date: {date_str}")
+                logger.info(f"Extracted date using pattern {idx+1}: {date_str}")
                 return date_str
         
         logger.warning("No date pattern matched")
@@ -381,10 +403,12 @@ class OCRService:
         Returns:
             OCRResult with CIL extraction
         """
+        logger.info(f"Starting CIL extraction (image size: {len(image_bytes)} bytes)")
         try:
             text = self._analyze_document(image_bytes)
             
             if not text:
+                logger.warning("CIL extraction: No text found in image")
                 return OCRResult(
                     success=False,
                     data=None,
@@ -394,6 +418,7 @@ class OCRService:
             cil = self._extract_cil_from_text(text)
             
             if not cil:
+                logger.warning("CIL extraction: CIL number not found in extracted text")
                 return OCRResult(
                     success=False,
                     data=None,
@@ -401,6 +426,7 @@ class OCRService:
                 )
             
             bill_info = BillInfo(cil=cil, raw_text=text)
+            logger.info(f"CIL extraction SUCCESS: CIL={cil}")
             
             return OCRResult(
                 success=True,
@@ -409,7 +435,7 @@ class OCRService:
             )
             
         except Exception as e:
-            logger.error(f"CIL extraction failed: {e}")
+            logger.error(f"CIL extraction failed: {e}", exc_info=True)
             return OCRResult(
                 success=False,
                 data=None,
@@ -426,10 +452,12 @@ class OCRService:
         Returns:
             OCRResult with complete bill information
         """
+        logger.info(f"Starting bill info extraction (image size: {len(image_bytes)} bytes)")
         try:
             text = self._analyze_document(image_bytes)
             
             if not text:
+                logger.warning("Bill extraction: No text found in image")
                 return OCRResult(
                     success=False,
                     data=None,
@@ -437,6 +465,7 @@ class OCRService:
                 )
             
             # Extract all fields
+            logger.debug("Extracting individual fields from OCR text...")
             cil = self._extract_cil_from_text(text)
             name = self._extract_name_from_text(text)
             amount_due = self._extract_amount_from_text(text)
@@ -445,6 +474,7 @@ class OCRService:
             consumption = self._extract_consumption_from_text(text)
             
             # Extract breakdown (water/electricity amounts)
+            logger.debug("Extracting service breakdown...")
             breakdown = {}
             water_match = re.search(
                 r'(?:Eau\s+et\s+Assainissement|الماء\s+والتطهير).*?([\d,\.]+)',
@@ -460,14 +490,28 @@ class OCRService:
             if water_match:
                 try:
                     breakdown["water"] = float(water_match.group(1).replace(',', '.'))
+                    logger.debug(f"Extracted water breakdown: {breakdown['water']}")
                 except ValueError:
+                    logger.debug("Water breakdown match found but failed to parse")
                     pass
             
             if elec_match:
                 try:
                     breakdown["electricity"] = float(elec_match.group(1).replace(',', '.'))
+                    logger.debug(f"Extracted electricity breakdown: {breakdown['electricity']}")
                 except ValueError:
+                    logger.debug("Electricity breakdown match found but failed to parse")
                     pass
+            
+            # Log extracted fields summary
+            logger.info("Bill extraction results:")
+            logger.info(f"  CIL: {cil}")
+            logger.info(f"  Name: {name}")
+            logger.info(f"  Amount Due: {amount_due} DH" if amount_due else "  Amount Due: Not found")
+            logger.info(f"  Due Date: {due_date}" if due_date else "  Due Date: Not found")
+            logger.info(f"  Service Type: {service_type}" if service_type else "  Service Type: Not found")
+            logger.info(f"  Consumption: {consumption}" if consumption else "  Consumption: Not found")
+            logger.info(f"  Breakdown: {breakdown}" if breakdown else "  Breakdown: None")
             
             bill_info = BillInfo(
                 cil=cil,
@@ -480,6 +524,8 @@ class OCRService:
                 raw_text=text
             )
             
+            logger.info("Bill information extraction SUCCESS")
+            
             return OCRResult(
                 success=True,
                 data=bill_info,
@@ -487,7 +533,7 @@ class OCRService:
             )
             
         except Exception as e:
-            logger.error(f"Bill information extraction failed: {e}")
+            logger.error(f"Bill information extraction failed: {e}", exc_info=True)
             return OCRResult(
                 success=False,
                 data=None,

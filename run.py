@@ -1,16 +1,25 @@
 """Script to run both backend and frontend."""
+import argparse
 import subprocess
 import sys
 import time
 import os
 
 
-def run_backend():
+def run_backend(verbose_logging: bool = False):
     """Start the FastAPI backend server."""
     print("Starting backend server on http://localhost:8000...")
+    if verbose_logging:
+        print("Verbose logging enabled (--logs flag)")
+    
+    env = os.environ.copy()
+    if verbose_logging:
+        env["VERBOSE_LOGGING"] = "true"
+    
     return subprocess.Popen(
         [sys.executable, "-m", "uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"],
-        cwd=os.path.dirname(os.path.abspath(__file__))
+        cwd=os.path.dirname(os.path.abspath(__file__)),
+        env=env
     )
 
 
@@ -25,8 +34,18 @@ def run_frontend():
 
 def main():
     """Main function to run both services."""
+    parser = argparse.ArgumentParser(description="SRM Application - Start Backend and Frontend")
+    parser.add_argument(
+        "--logs",
+        action="store_true",
+        help="Enable verbose debug logging (logs to console and logs/srm_debug.log)"
+    )
+    args = parser.parse_args()
+    
     print("=" * 60)
     print("SRM Application - Starting Backend and Frontend")
+    if args.logs:
+        print("Verbose logging: ENABLED")
     print("=" * 60)
     
     backend_process = None
@@ -34,7 +53,7 @@ def main():
     
     try:
         # Start backend
-        backend_process = run_backend()
+        backend_process = run_backend(verbose_logging=args.logs)
         time.sleep(2)  # Wait for backend to start
         
         # Start frontend

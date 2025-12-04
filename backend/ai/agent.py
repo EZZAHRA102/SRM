@@ -83,7 +83,14 @@ class SRMAgent:
         Returns:
             ChatResponse with agent response
         """
+        logger.info("=" * 60)
+        logger.info("AI Chat Request")
+        logger.info("=" * 60)
+        logger.info(f"Incoming user message: {message}")
+        logger.debug(f"Chat history length: {len(history)} messages")
+        
         if not self._llm:
+            logger.error("LLM not initialized")
             return ChatResponse(
                 response="عذراً، لم يتم تهيئة المساعد الذكي. الرجاء التحقق من الإعدادات.",
                 tool_calls=None
@@ -92,29 +99,48 @@ class SRMAgent:
         try:
             # Build messages list
             messages = self._build_messages(message, history)
+            logger.debug(f"Built {len(messages)} messages for LLM (including system prompt)")
             
             # Get response from agent
+            logger.debug("Invoking LLM...")
             response = self._llm.invoke(messages)
+            logger.debug(f"LLM response received: {response.content[:200]}...")
             
             # Check if agent wants to use tools
             tool_calls = []
             if hasattr(response, 'tool_calls') and response.tool_calls:
+                logger.info(f"AI requested {len(response.tool_calls)} tool call(s)")
+                for idx, tool_call in enumerate(response.tool_calls):
+                    tool_name = tool_call.get('name', 'unknown')
+                    tool_args = tool_call.get('args', {})
+                    logger.info(f"Tool call {idx+1}: {tool_name}")
+                    logger.debug(f"Tool {tool_name} arguments: {tool_args}")
+                
                 # Add the AI response with tool calls to messages
                 messages.append(response)
                 
                 # Execute tools and create tool messages
+                logger.info("Executing tool calls...")
                 tool_messages = self._execute_tools(response.tool_calls)
+                logger.info(f"Tool execution completed, {len(tool_messages)} tool message(s) generated")
                 messages.extend(tool_messages)
                 
                 # Store tool call info for response
                 tool_calls = response.tool_calls
                 
                 # Get final response after tool execution
+                logger.debug("Invoking LLM for final response after tool execution...")
                 final_response = self._llm.invoke(messages)
+                logger.info(f"Final AI response: {final_response.content[:200]}...")
+                logger.info("=" * 60)
+                
                 return ChatResponse(
                     response=final_response.content,
                     tool_calls=tool_calls
                 )
+            
+            logger.info(f"AI response (no tools): {response.content[:200]}...")
+            logger.info("=" * 60)
             
             return ChatResponse(
                 response=response.content,
@@ -122,7 +148,7 @@ class SRMAgent:
             )
             
         except Exception as e:
-            logger.error(f"Error in chat: {e}")
+            logger.error(f"Error in chat: {e}", exc_info=True)
             return ChatResponse(
                 response=f"عذراً، حدث خطأ: {str(e)}",
                 tool_calls=None
@@ -165,19 +191,28 @@ class SRMAgent:
         """
         tool_messages = []
         
-        for tool_call in tool_calls:
+        for idx, tool_call in enumerate(tool_calls):
             tool_name = tool_call.get('name')
             tool_args = tool_call.get('args', {})
             tool_call_id = tool_call.get('id')
+            
+            logger.info(f"Executing tool {idx+1}/{len(tool_calls)}: {tool_name}")
+            logger.debug(f"Tool {tool_name} call ID: {tool_call_id}")
+            logger.debug(f"Tool {tool_name} arguments: {tool_args}")
             
             # Find and execute the tool
             tool_result = None
             for tool in self._tools:
                 if tool.name == tool_name:
                     try:
+                        logger.debug(f"Invoking tool {tool_name}...")
                         tool_result = tool.invoke(tool_args)
+                        logger.info(f"Tool {tool_name} execution SUCCESS")
+                        # Log result preview (first 300 chars)
+                        result_preview = str(tool_result)[:300] + "..." if len(str(tool_result)) > 300 else str(tool_result)
+                        logger.debug(f"Tool {tool_name} result (preview): {result_preview}")
                     except Exception as e:
-                        logger.error(f"Tool {tool_name} execution failed: {e}")
+                        logger.error(f"Tool {tool_name} execution failed: {e}", exc_info=True)
                         tool_result = f"عذراً، حدث خطأ في تنفيذ الأداة: {str(e)}"
                     break
             
@@ -186,6 +221,8 @@ class SRMAgent:
                     content=str(tool_result),
                     tool_call_id=tool_call_id
                 ))
+            else:
+                logger.warning(f"Tool {tool_name} returned no result")
         
         return tool_messages
 

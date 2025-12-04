@@ -14,6 +14,7 @@ Had l-système kay3awen les clients yfhmou 3lach t9t3at service, y-checkiw statu
 - **🔧 Maintenance Information**: Kay-checké wach kayna chi travaux de maintenance awla service outage f zone dial l-client.
 - **🌐 RTL Arabic UI**: Interface fully localized l l-3arbiya w supportée RTL (Right-to-Left).
 - **🔄 Tool-Based AI Agent**: Agent mbni b **LangChain** li 9ader ykhddem des "tools" bach yjib l-information en temps réel.
+- **📊 Debug Logging**: Verbose logging system bach t-debug l-machakil (OCR extraction, DB queries, AI interactions) - t-lancé b `--logs` flag.
 
 ## 🏗️ Architecture Overview
 L'archi de base hiya normalement f had refonte dayrin sepration total mabin back o front 
@@ -178,6 +179,46 @@ streamlit run frontend/app.py --server.port 8501
 - **API Documentation**: http://localhost:8000/docs (Swagger UI)
 - **Alternative API Docs**: http://localhost:8000/redoc
 
+### 7. Debug Logging (Verbose Mode)
+
+Ila bghiti tchouf detailed logs bach t-debug l-machakil, t-lancé l-application b flag `--logs`:
+
+```bash
+python run.py --logs
+```
+
+Had l-flag ghadi y-activé verbose logging li kay-logé:
+
+- **OCR Extraction**: Raw text extracted, regex pattern matches, parsed fields (CIL, name, amount, date, etc.)
+- **Database Queries**: CIL lookups, user found/not found, data retrieved
+- **AI Interactions**: User messages, tool calls, tool execution results, AI responses
+- **API Requests/Responses**: Request details, response status, errors
+
+**Logs Output:**
+- **Console (stdout)**: Real-time logs f terminal
+- **File**: Persistent logs f `SRM/logs/srm_debug.log` (auto-rotation: 10MB max, 5 backups)
+
+**Alternative**: Tsta3ml environment variable:
+
+```bash
+# Windows PowerShell
+$env:VERBOSE_LOGGING="true"
+python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
+
+# Linux/Mac
+export VERBOSE_LOGGING=true
+uvicorn backend.main:app --host 0.0.0.0 --port 8000
+```
+
+**Example Log Output:**
+```
+2024-12-04 10:30:15 - backend.services.ocr_service - INFO - Starting bill info extraction (image size: 245678 bytes)
+2024-12-04 10:30:16 - backend.services.ocr_service - DEBUG - OCR Raw Text (preview): CIL: 1071324-101...
+2024-12-04 10:30:16 - backend.services.ocr_service - INFO - Extracted CIL using pattern CIL_PATTERN_WITH_LABEL: 1071324-101
+2024-12-04 10:30:16 - backend.repositories.mock_repository - INFO - Database query: get_user_by_cil(CIL='1071324-101')
+2024-12-04 10:30:16 - backend.repositories.mock_repository - INFO - Database query: User FOUND for CIL='1071324-101'
+```
+
 ## 🧪 Testing
 
 ### Run All Tests
@@ -250,6 +291,7 @@ SRM/
 │   ├── repositories/       # Data access layer (Mock DB)
 │   ├── services/           # Business logic layer (User, Maintenance, OCR)
 │   ├── config.py           # Config management
+│   ├── logging_config.py   # Logging configuration
 │   └── main.py             # FastAPI entry point
 ├── frontend/               # Streamlit frontend
 │   ├── components/        # UI components (Chat, Sidebar, etc.)
@@ -257,6 +299,8 @@ SRM/
 │   ├── api_client.py      # Client li kaydwi m3a Backend
 │   └── app.py             # Streamlit entry point
 ├── tests/                  # Test suite
+├── logs/                   # Debug logs (created when --logs flag used)
+│   └── srm_debug.log      # Persistent log file
 ├── requirements.txt       # Les librairies Python
 ├── setup.ps1             # Script setup Windows
 ├── run.py                # Script bach t-lancé kolchi
@@ -278,6 +322,7 @@ Had les variables darouri t-configurihom:
 | `AZURE_DOCUMENT_INTELLIGENCE_KEY` | Key dial Doc Intelligence | Yes | - |
 | `API_HOST` | Backend host | No | `0.0.0.0` |
 | `API_PORT` | Backend port | No | `8000` |
+| `VERBOSE_LOGGING` | Enable verbose debug logging | No | `false` |
 
 ## 🧩 Key Components (Les Éléments MOHIMIINNNEEE hhhh)
 
@@ -328,3 +373,5 @@ Had les variables darouri t-configurihom:
 - Vérifié Azure OpenAI credentials w deployment name.
 - T2aked mn API version wach compatible m3a subscription dialek.
 - Chof les logs dial backend bach t3rf l-erreur exact.
+- T-lancé b `--logs` flag bach tchouf detailed logs: `python run.py --logs`
+- Chof fichier `logs/srm_debug.log` ila knti mkhddem verbose logging.

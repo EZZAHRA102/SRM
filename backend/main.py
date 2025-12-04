@@ -31,13 +31,20 @@ app.include_router(ocr.router, prefix="/api", tags=["ocr"])
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize agent on startup."""
+    """Initialize logging and agent on startup."""
+    # Initialize logging (check both env var and settings)
+    verbose = os.getenv("VERBOSE_LOGGING", "false").lower() == "true" or settings.verbose_logging
+    setup_logging(verbose=verbose)
+    
+    # Initialize agent
     try:
         agent = get_agent()
         if not agent:
             raise RuntimeError("Failed to initialize agent")
     except Exception as e:
-        print(f"Warning: Agent initialization failed: {e}")
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Agent initialization failed: {e}")
 
 
 @app.get("/")

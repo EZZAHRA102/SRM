@@ -1,10 +1,13 @@
 """Mock repository implementation using Pandas DataFrames."""
+import logging
 import pandas as pd
 from typing import Optional, List
 from datetime import datetime
 
 from backend.models import User, Zone, PaymentStatus, ServiceStatus, ServiceType, MaintenanceStatus
 from backend.repositories.base import BaseRepository
+
+logger = logging.getLogger(__name__)
 
 
 class MockRepository(BaseRepository):
@@ -61,12 +64,20 @@ class MockRepository(BaseRepository):
         Returns:
             User if found, None otherwise
         """
+        logger.info(f"Database query: get_user_by_cil(CIL='{cil}')")
+        logger.debug(f"Searching in {len(self._users_table)} users")
+        
         user_row = self._users_table[self._users_table['cil'] == cil]
         
         if user_row.empty:
+            logger.warning(f"Database query: User NOT FOUND for CIL='{cil}'")
+            logger.debug(f"Available CILs in database: {list(self._users_table['cil'].values)}")
             return None
         
         row = user_row.iloc[0]
+        logger.info(f"Database query: User FOUND for CIL='{cil}'")
+        logger.debug(f"User data retrieved: name='{row['name']}', zone_id={row['zone_id']}, "
+                    f"payment_status='{row['payment_status']}', outstanding_balance={row['outstanding_balance']}")
         
         # Map payment status string to enum
         payment_status = PaymentStatus.PAID if row['payment_status'] == 'مدفوع' else PaymentStatus.UNPAID
@@ -108,12 +119,18 @@ class MockRepository(BaseRepository):
         Returns:
             Zone if found, None otherwise
         """
+        logger.info(f"Database query: get_zone_by_id(zone_id={zone_id})")
+        
         zone_row = self._zones_table[self._zones_table['zone_id'] == zone_id]
         
         if zone_row.empty:
+            logger.warning(f"Database query: Zone NOT FOUND for zone_id={zone_id}")
             return None
         
         row = zone_row.iloc[0]
+        logger.info(f"Database query: Zone FOUND for zone_id={zone_id}")
+        logger.debug(f"Zone data retrieved: name='{row['zone_name']}', "
+                    f"maintenance_status='{row['maintenance_status']}'")
         
         # Map maintenance status string to enum
         maintenance_status = (
