@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     api_host: str = Field("0.0.0.0", env="API_HOST")
     api_port: int = Field(8000, env="API_PORT")
     
+    # Logging Configuration
+    verbose_logging: bool = Field(False, env="VERBOSE_LOGGING")
+    
     class Config:
         """Pydantic config."""
         env_file = ".env"

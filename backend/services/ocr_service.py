@@ -1,6 +1,7 @@
 """OCR Service using Azure Document Intelligence with clear patterns and error handling."""
 import re
 import logging
+import base64
 from typing import Optional, Dict, Any
 from backend.models import OCRResult, BillInfo
 
@@ -168,10 +169,13 @@ class OCRService:
         try:
             client = self._get_client()
             
+            # The SDK version 1.0.0b1 requires base64Source parameter
+            # Convert bytes to base64 string
+            base64_data = base64.b64encode(image_bytes).decode("utf-8")
+            
             poller = client.begin_analyze_document(
                 "prebuilt-read",
-                body=image_bytes,
-                content_type="application/octet-stream"
+                analyze_request={"base64Source": base64_data}
             )
             
             result = poller.result()

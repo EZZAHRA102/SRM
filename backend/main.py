@@ -1,9 +1,11 @@
 """FastAPI application entry point."""
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.config import settings
 from backend.api.routes import health, chat, ocr
 from backend.api.deps import get_agent
+from backend.logging_config import setup_logging
 
 # Create FastAPI app
 app = FastAPI(
