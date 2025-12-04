@@ -12,6 +12,7 @@ from flask import Flask
 from flask_cors import CORS
 from routes.chat import chat_bp
 from routes.ocr import ocr_bp
+from routes.speech import speech_bp
 from routes.health import health_bp
 from config.settings import settings
 
@@ -41,6 +42,7 @@ def create_app():
     # Register blueprints
     app.register_blueprint(health_bp, url_prefix='/api')
     app.register_blueprint(chat_bp, url_prefix='/api')
+    app.register_blueprint(speech_bp, url_prefix='/api')
     app.register_blueprint(ocr_bp, url_prefix='/api')
     
     return app

@@ -23,6 +23,10 @@ class Settings:
     AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT: Optional[str] = os.getenv("AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT")
     AZURE_DOCUMENT_INTELLIGENCE_KEY: Optional[str] = os.getenv("AZURE_DOCUMENT_INTELLIGENCE_KEY")
     
+    # Azure Speech Configuration
+    AZURE_SPEECH_KEY: Optional[str] = os.getenv("AZURE_SPEECH_KEY")
+    AZURE_SPEECH_REGION: Optional[str] = os.getenv("AZURE_SPEECH_REGION", "francecentral")
+    
     # Application Constants
     APP_TITLE: str = "نظام خدمة العملاء - SRM"
     APP_ICON: str = "💧"
@@ -45,6 +49,8 @@ class Settings:
             missing_keys.append("AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT")
         if not cls.AZURE_DOCUMENT_INTELLIGENCE_KEY:
             missing_keys.append("AZURE_DOCUMENT_INTELLIGENCE_KEY")
+        if not cls.AZURE_SPEECH_KEY:
+            missing_keys.append("AZURE_SPEECH_KEY")
         
         is_valid = len(missing_keys) == 0
         return is_valid, missing_keys

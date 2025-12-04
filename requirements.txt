@@ -6,4 +6,5 @@ openai==1.58.1
 pandas==2.1.4
 python-dotenv==1.0.0
 azure-ai-documentintelligence==1.0.0b1
+azure-cognitiveservices-speech==1.38.0
 Pillow==10.1.0
